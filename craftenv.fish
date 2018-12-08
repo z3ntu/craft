@@ -25,21 +25,25 @@ end
 set CRAFT_ENV (eval $CRAFT_PYTHON_BIN $craftRoot/bin/CraftSetupHelper.py --setup)
 function export_lines
     for line in $argv
-#        echo Line: $line
         set parts (string split '=' $line)
-#        echo Set $parts[1] to $parts[2]
-        set -gx $parts[1] $parts[2]
+        # In fish, the PATH variable is a list of strings
+        if test $parts[1] = "PATH"
+            set paths (string split ':' $parts[2])
+            set -gx PATH $paths
+        else
+            set -gx $parts[1] $parts[2]
+        end
     end
 end
 export_lines $CRAFT_ENV
 
 function craft
-    eval $CRAFT_PYTHON_BIN $craftRoot/bin/craft.py $argv
+    eval $CRAFT_PYTHON_BIN $craftRoot/bin/craft.py (string escape -- $argv)
 end
 
 function cs
     set dir (craft -q --ci-mode --get "sourceDir()" $argv)
-    if test $status > 0
+    if test $status -gt 0
         echo $dir
     else
         cd $dir
@@ -47,10 +51,8 @@ function cs
 end
 
 function cb
-    echo $argv
-    craft -q --ci-mode --get "buildDir()" $argv
     set dir (craft -q --ci-mode --get "buildDir()" $argv)
-    if test $status > 0
+    if test $status -gt 0
         echo $dir
     else
         cd $dir
